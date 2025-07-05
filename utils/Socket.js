@@ -1,12 +1,11 @@
-
 import { io } from 'socket.io-client';
 
-// Replace with your backend server URL
-const SOCKET_URL = 'http://192.168.1.100:5001';
+const SOCKET_URL = 'http://192.168.1.100:5001'; // ensure this is reachable from the device
 
 const socket = io(SOCKET_URL, {
-  transports: ['websocket'], // Ensures only WebSocket is used
+  transports: ['websocket'],
   jsonp: false,
-}); 
+  autoConnect: true, // optional
+});
 
-export default socket; 
+export default socket;

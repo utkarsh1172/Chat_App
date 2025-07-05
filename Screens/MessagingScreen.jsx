@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useContext } from 'react';
+import React, { useState, useLayoutEffect, useContext, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -11,11 +11,14 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AuthContext } from '../context';
 import { darkTheme, lightTheme } from '../theme';
+import socket from '../utils/Socket';
+import axios from 'axios';
 
 const MessageScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { isDark } = useContext(AuthContext);
+    const { currentUser } = useContext(AuthContext); 
   const theme = isDark ? darkTheme : lightTheme;
 
   const { user } = route.params;
@@ -27,6 +30,38 @@ const MessageScreen = () => {
   ]);
   const [newMessage, setNewMessage] = useState('');
 
+  useEffect(() => {
+    fetchMessages()
+  },[])
+
+  useEffect(() => {
+  if (user?._id) {
+    socket.connect(); // optional if autoConnect is disabled
+    socket.emit('user_connected', user._id);
+  }
+
+  return () => {
+    socket.disconnect();
+  };
+}, [user]);
+useEffect(() => {
+  socket.on("receive_message", (data) => {
+    if (data.senderId !== currentUser._id) {
+      setMessages(prev => [
+        {
+          id: Date.now().toString(),
+          text: data.message,
+          sender: 'them',
+        },
+        ...prev,
+      ]);
+    }
+  });
+
+  return () => {
+    socket.off("receive_message");
+  };
+}, [currentUser]);
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
@@ -50,16 +85,47 @@ const MessageScreen = () => {
     });
   }, [navigation, theme]);
 
+  const fetchMessages = async () => {
+  try {
+    const response = await axios.post("http://192.168.1.100:5001/get-messages", {
+      senderId: currentUser._id,
+      receiverId: user._id,
+    });
+
+    const msgs = response.data.data.map((msg) => ({
+      id: msg._id,
+      text: msg.text,
+      sender: msg.senderId === currentUser._id ? "me" : "them",
+    }));
+
+    setMessages(msgs.reverse()); // because FlatList is inverted
+  } catch (error) {
+    console.error("Failed to fetch messages:", error);
+  }
+};
   const sendMessage = () => {
-    if (newMessage.trim()) {
-      setMessages(prev => [...prev, {
+  if (newMessage.trim()) {
+    const messageData = {
+      senderId: currentUser._id,  // from context or auth state
+      receiverId: user._id,        // passed in navigation params
+      message: newMessage,
+    };
+
+    socket.emit("send_message", messageData);
+
+    setMessages(prev => [
+      {
         id: Date.now().toString(),
         text: newMessage,
         sender: 'me',
-      }]);
-      setNewMessage('');
-    }
-  };
+      },
+      ...prev,
+    ]);
+    setNewMessage('');
+  }
+};
+
+ 
 
   const renderMessage = ({ item }) => (
     <View
