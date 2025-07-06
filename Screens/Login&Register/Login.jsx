@@ -20,35 +20,65 @@ import { AuthContext, GlobalContext } from '../../context';
 function LoginPage({props}) {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
+     const [showPassword, setShowPassword] = useState(true);
   const [password, setPassword] = useState('');
   const { setIsLoggedin, setCurrentUser } = useContext(AuthContext);
 
-  function handleSubmit() {
-  console.log(email, password);
+function handleLogin() {
+  if (!email || !password) {
+    Alert.alert('Error', 'Please enter both email and password');
+    return;
+  }
 
-  const userData = {
-    email: email,
-    password,
-  };
+  const userData = { email, password };
 
-  axios.post('http://192.168.1.100:5001/login-user', userData)
+  axios.post('http://192.168.1.102:5001/login-user', userData)
     .then(res => {
-      console.log("RESPONSE:", res.data);
-      if (res.data.status === 'ok') {
-        Alert.alert('Logged In Successfully');
-       AsyncStorage.setItem('token', res.data.token);
-AsyncStorage.setItem('user', JSON.stringify(res.data.user));
-setIsLoggedin(true);
-setCurrentUser(res.data.user);
-        navigation.navigate('Chatscreen')
+      const data = res.data;
+
+      if (data.status === 'ok') {
+        Alert.alert('Success', 'Logged in successfully');
+        AsyncStorage.setItem('token', data.token);
+        AsyncStorage.setItem('user', JSON.stringify(data.user));
+        setIsLoggedin(true);
+        setCurrentUser(data.user);
+        // navigation.navigate('ChatScreen');
       } else {
-        Alert.alert('Login Failed', res.data.message || 'Invalid credentials');
-        console.log("Login error:", res.data);
+        Alert.alert('Login Failed', data.message || 'Invalid credentials');
+        console.log('Login error (invalid):', data);
       }
     })
     .catch(error => {
-      Alert.alert('Network Error', error.message);
-      console.error('Axios error:', error);
+      if (error.response) {
+        const message = error.response.data?.message || 'Invalid email or password';
+
+        if (message.includes("User not registered")) {
+          Alert.alert(
+            "Account Not Found",
+            "No account found with this email. Would you like to register?",
+            [
+              {
+                text: "Cancel",
+                style: "cancel"
+              },
+              {
+                text: "Register",
+                onPress: () => navigation.navigate('Register')
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Login Failed', message);
+        }
+
+        console.log('Login error (response):', error.response);
+      } else if (error.request) {
+        Alert.alert('Network Error', 'Unable to connect to the server');
+        console.log('Login error (no response):', error.request);
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred');
+        console.log('Login error (other):', error.message);
+      }
     });
 }
   async function getData() {
@@ -95,7 +125,25 @@ setCurrentUser(res.data.user);
                placeholderTextColor="#999" 
               style={styles.textInput}
               onChange={e => setPassword(e.nativeEvent.text)}
+              secureTextEntry={showPassword}
             />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {password.length < 1 ? null : !showPassword ? (
+                  <Feather
+                    name="eye-off"
+                    style={{marginRight: -10}}
+                    color={ '#7d48ff'}
+                    size={23}
+                  />
+                ) : (
+                  <Feather
+                    name="eye"
+                    style={{marginRight: -10}}
+                 color={ '#7d48ff'}
+                    size={23}
+                  />
+                )}
+              </TouchableOpacity>
           </View>
           <View
             style={{
@@ -110,7 +158,7 @@ setCurrentUser(res.data.user);
           </View>
         </View>
         <View style={styles.button}>
-          <TouchableOpacity style={styles.inBut} onPress={() => handleSubmit()}>
+          <TouchableOpacity style={styles.inBut} onPress={() => handleLogin()}>
             <View>
               <Text style={styles.textSign}>Log in</Text>
             </View>

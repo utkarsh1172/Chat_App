@@ -6,37 +6,56 @@ import { useEffect, useContext, useState } from 'react';
 import LoginPage from './Screens/Login&Register/Login';
 import RegisterPage from './Screens/Login&Register/Register';
 import ChatScreen from './Screens/ChatScreen';
-import { AuthContext } from './context';
 import MessageScreen from './Screens/MessagingScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from './context';
 
 const Stack = createNativeStackNavigator();
 
 function AppNavigator() {
-  const { isLoggedin } = useContext(AuthContext);
-  const [token, setToken] = useState('') 
-  // const token = AsyncStorage.getItem('token');
-
-  console.log("isloggedin", isLoggedin,token)
+  const { isLoggedin, setIsLoggedin, setCurrentUser } = useContext(AuthContext);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
-    SplashScreen.hide();
-    setToken(AsyncStorage.getItem('token'))
-    console.log('token,', token)
+    const initialize = async () => {
+      SplashScreen.hide();
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const user = await AsyncStorage.getItem('user');
+        if (token && user) {
+          setIsLoggedin(true);
+          setCurrentUser(JSON.parse(user));
+        } else {
+          setIsLoggedin(false);
+        }
+      } catch (err) {
+        console.error('Error loading token/user:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialize();
   }, []);
+
+  if (loading) return null; // Or splash/loading screen
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isLoggedin ? (
-          <Stack.Screen name="Login" component={LoginPage} />
-        ) : (
-          <Stack.Screen name="Chatscreen" component={ChatScreen} />
-        )}
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    {!isLoggedin ? (
+      <>
+        <Stack.Screen name="Login" component={LoginPage} />
         <Stack.Screen name="Register" component={RegisterPage} />
-        <Stack.Screen name='MessageScreen' component={MessageScreen}/>
-      </Stack.Navigator>
-    </NavigationContainer>
+      </>
+    ) : (
+      <>
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
+        <Stack.Screen name="MessageScreen" component={MessageScreen} />
+      </>
+    )}
+  </Stack.Navigator>
+</NavigationContainer>
   );
 }
 

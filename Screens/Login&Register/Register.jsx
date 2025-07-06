@@ -42,9 +42,9 @@ const {
       }
       if(nameVerify && emailVerify && passwordVerify && mobileVerify){
         
-      axios.post('http://192.168.1.100:5001/register',userData) 
+      axios.post('http://192.168.1.102:5001/register',userData) 
       .then(res => {console.log(res.data) 
-        if(res.status == "ok"){
+        if(res.data.status === "ok"){
         Alert.alert("Registered Successfullly")
         navigation.navigate('Login')
         
@@ -156,6 +156,8 @@ const {
                 placeholder="Email"
                 style={styles.textInput}
                 placeholderTextColor="#999" 
+                autoCapitalize="none" // 
+                 keyboardType="email-address"
                 onChange={e => handleEmail(e)}
               />
               {email.length < 1 ? null : emailVerify ? (
@@ -184,6 +186,7 @@ const {
                 placeholder="Mobile"
                 placeholderTextColor="#999" 
                 style={styles.textInput}
+                 keyboardType="phone-pad" 
                 onChange={e => handleMobile(e)}
                 maxLength={10}
               />

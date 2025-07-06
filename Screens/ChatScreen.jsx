@@ -22,7 +22,7 @@ const theme = isDark ? darkTheme : lightTheme;
   const handleLogout = async () => {
     await AsyncStorage.removeItem('token');
               setIsLoggedin(false); 
-    navigation.replace('Login');
+    // navigation.replace('Login');
   };
 
   return (
